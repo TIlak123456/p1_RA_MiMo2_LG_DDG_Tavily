@@ -29,6 +29,8 @@ This agent follows the **ReAct (Reasoning + Acting)** pattern:
 
 ## Tech Stack
 
+### Core Components
+
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | **LLM** | Xiaomi MiMo (mimo-v2-flash) | Reasoning and response generation |
@@ -37,6 +39,53 @@ This agent follows the **ReAct (Reasoning + Acting)** pattern:
 | **Backup Search** | DuckDuckGo | Alternative search (available) |
 | **Language** | Python 3.9+ | Runtime |
 | **Config** | python-dotenv | Environment variable management |
+
+### Design Pattern
+
+| Pattern | Description |
+|---------|-------------|
+| **ReAct** | Reasoning + Acting - LLM decides when to use tools |
+| **Tool-Use Agent** | Agent can call external tools (search) to gather information |
+| **Stateful Graph** | Conversation history maintained across turns |
+
+### Dependencies
+
+```
+langgraph          - Agent graph framework
+langchain_openai   - LLM integration (OpenAI-compatible API)
+langchain_community - Tool integrations (Tavily, DuckDuckGo)
+tavily-python      - Tavily Search API client
+python-dotenv      - Environment variable loading
+```
+
+### Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      USER INPUT                              │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     LANGGRAPH                                │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │                    AgentState                        │    │
+│  │              (messages: list[BaseMessage])           │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                          │                                   │
+│            ┌─────────────┴─────────────┐                    │
+│            ▼                           ▼                    │
+│     ┌─────────────┐             ┌─────────────┐             │
+│     │    Agent    │◄───────────►│    Tools    │             │
+│     │   (MiMo)    │             │  (Tavily)   │             │
+│     └─────────────┘             └─────────────┘             │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     AGENT RESPONSE                           │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
