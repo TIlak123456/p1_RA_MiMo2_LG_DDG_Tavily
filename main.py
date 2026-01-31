@@ -72,11 +72,29 @@ app = workflow.compile()
 
 # --- STEP 6: EXECUTION ---
 if __name__ == "__main__":
-    # This is the starting message we send to the agent
-    user_input = {"messages": [HumanMessage(content="What is the current price of Nvidia stock and what happened in their latest earnings call?")]}
+    print("--- Research Agent (type 'quit' to exit) ---\n")
     
-    print("--- Running Agent ---")
-    result = app.invoke(user_input)
+    # Keep conversation history for multi-turn conversations
+    messages = []
     
-    # Print the last message in the notebook (the agent's answer)
-    print("Agent Output:", result["messages"][-1].content)
+    while True:
+        user_text = input("You: ").strip()
+        
+        if user_text.lower() in ['quit', 'exit', 'q']:
+            print("Goodbye!")
+            break
+        
+        if not user_text:
+            continue
+        
+        # Add user message to history
+        messages.append(HumanMessage(content=user_text))
+        
+        # Run the agent
+        result = app.invoke({"messages": messages})
+        
+        # Update messages with full conversation (includes tool calls and responses)
+        messages = result["messages"]
+        
+        # Print the agent's final response
+        print(f"\nAgent: {messages[-1].content}\n")
