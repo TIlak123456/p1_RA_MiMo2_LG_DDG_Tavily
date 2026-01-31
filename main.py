@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 # 1. THE BRAIN & LOGIC IMPORTS
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 
@@ -45,14 +45,24 @@ def call_mimo(state: AgentState):
 tools = [tavily]
 tool_node = ToolNode(tools)
 
+# Track tool usage to prevent infinite loops
+tool_call_count = 0
+MAX_TOOL_CALLS = 3
+
 # Conditional function to check if we should use tools
 def should_continue(state: AgentState):
     """Decide whether to use tools or end."""
+    global tool_call_count
     last_message = state['messages'][-1]
-    # If the LLM made a tool call, route to tools
-    if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
-        return "tools"
-    # Otherwise, end the conversation
+    
+    # If the LLM made a tool call, route to tools (but limit iterations)
+    if isinstance(last_message, AIMessage) and hasattr(last_message, 'tool_calls') and last_message.tool_calls:
+        if len(last_message.tool_calls) > 0 and tool_call_count < MAX_TOOL_CALLS:
+            tool_call_count += 1
+            return "tools"
+    
+    # Reset counter for next query and end
+    tool_call_count = 0
     return END
 
 # --- STEP 5: THE GRAPH (FLOW) ---
@@ -90,8 +100,8 @@ if __name__ == "__main__":
         # Add user message to history
         messages.append(HumanMessage(content=user_text))
         
-        # Run the agent
-        result = app.invoke({"messages": messages})
+        # Run the agent with recursion limit
+        result = app.invoke({"messages": messages}, config={"recursion_limit": 10})
         
         # Update messages with full conversation (includes tool calls and responses)
         messages = result["messages"]
